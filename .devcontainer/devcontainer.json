@@ -1,0 +1,7 @@
+{
+  "name": "test-backend",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postCreateCommand": "go version && task --version && task install-golangci-lint && task install-formatters"
+}
