@@ -3,8 +3,6 @@ syntax = "proto3";
 package inventory.v1;
 
 import "google/protobuf/timestamp.proto";
-import "google/type/money.proto";
-import "google/protobuf/wrappers.proto";
 
 option go_package = "github.com/qyrlabs/test-backend/shared/pkg/proto/inventory/v1;inventoryv1";
 
@@ -49,7 +47,7 @@ message Part {
     string description = 3;
 
     // Unit price.
-    google.type.Money price = 4;
+    int64 price = 4;
 
     // Quantity available in stock.
     int64 stock_quantity = 5;
@@ -79,11 +77,11 @@ message Part {
 // Filter for details.
 // If field is empty - do not filter by this field.
 message PartsFilter {
-    repeated google.protobuf.StringValue uuids = 1;
-    repeated google.protobuf.StringValue names = 2;
+    repeated string uuids = 1;
+    repeated string names = 2;
     repeated Category categories = 3;
-    repeated google.protobuf.StringValue manufacturer_countries = 4;
-    repeated google.protobuf.StringValue tags = 5;
+    repeated string manufacturer_countries = 4;
+    repeated string tags = 5;
 }
 
 // Category of the Part.

@@ -91,6 +91,25 @@ tasks:
         done
         exit $ERR
 
+  lint:fix:
+    desc: "Запускает golangci-lint для всех модулей"
+    deps: [ install-golangci-lint ]
+    vars:
+      MODULES: '{{.MODULES}}'
+      GOLANGCI_LINT: '{{.GOLANGCI_LINT}}'
+    cmds:
+      - |
+        set -e
+        ERR=0
+        echo "🔍 Линтим все модули ..."
+        for mod in {{.MODULES}}; do
+          if [ -d "$mod" ]; then
+            echo "🔍 Линтим $mod module"
+            {{.GOLANGCI_LINT}} run $mod/... --fix --config=.golangci.yml || ERR=1
+          fi
+        done
+        exit $ERR
+
   deps:update:
     desc: "Обновление зависимостей в go.mod во всех модулях"
     cmds:

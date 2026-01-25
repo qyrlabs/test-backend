@@ -3,7 +3,6 @@ module github.com/qyrlabs/test-backend/shared
 go 1.25.6
 
 require (
-	google.golang.org/genproto v0.0.0-20260122232226-8e98ce8d340d
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 )
