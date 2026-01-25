@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/qyrlabs/test-backend/shared/pkg/proto/payment/v1;paymentv1";
+
+// PaymentService provides operations for working with payments.
+service PaymentService {
+    // Initiates order payment.
+    rpc PayOrder(PayOrderRequest) returns (PayOrderResponse);
+}
+
+// PayOrderRequest contains data for initiating an order payment.
+message PayOrderRequest {
+    // Order UUID.
+    string order_uuid = 1;
+
+    // UUID of the user who initiates the payment.
+    string user_uuid = 2;
+
+    // Selected payment method.
+    PaymentMethod payment_method = 3;
+}
+
+
+// PayOrderResponse contains the result of payment initiation.
+message PayOrderResponse {
+    // Payment transaction UUID.
+    string transaction_uuid = 1;
+}
+
+// PaymentMethod enumerates available payment methods.
+enum PaymentMethod {
+    // Unknown payment method.
+    PAYMENT_METHOD_UNSPECIFIED = 0;
+
+    // Bank card.
+    PAYMENT_METHOD_CARD = 1;
+
+    // Fast Payment System (SBP).
+    PAYMENT_METHOD_SBP = 2;
+
+    // Credit card.
+    PAYMENT_METHOD_CREDIT_CARD = 3;
+
+    // Investor money (internal method).
+    PAYMENT_METHOD_INVESTOR_MONEY = 4;
+}

@@ -18,7 +18,7 @@ vars:
   PROTOC_GEN_GO: '{{.BIN_DIR}}/protoc-gen-go'
   PROTOC_GEN_GO_GRPC: '{{.BIN_DIR}}/protoc-gen-go-grpc'
 
-  MODULES: inventory order payment shared
+  MODULES: inventory payment shared
 
 tasks:
   install-formatters:
