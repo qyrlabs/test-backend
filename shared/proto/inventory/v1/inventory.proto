@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/type/money.proto";
+import "google/protobuf/wrappers.proto";
+
+option go_package = "github.com/qyrlabs/test-backend/shared/pkg/proto/inventory/v1;inventoryv1";
+
+// Inventory Service stores and provides info about Parts(details).
+service InventoryService {
+    // Get part info by its UUID.
+    rpc GetPart(GetPartRequest) returns (GetPartResponse);
+
+    // Returns List of Parts by filter.
+    rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
+}
+
+// Request to Get parts.
+message GetPartRequest {
+    string uuid = 1;
+}
+
+// Response to Get parts.
+message GetPartResponse {
+    Part part = 1;
+}
+
+// Request to List parts by filter.
+message ListPartsRequest {
+    PartsFilter filter = 1;
+}
+
+// List of found Parts by filter.
+message ListPartsResponse {
+    repeated Part parts = 1;
+}
+
+//  Part contains all general information.
+message Part {
+    // Unique identifier of the part.
+    string uuid = 1;
+
+    // Name of the part.
+    string name = 2;
+
+    // Description of the part.
+    string description = 3;
+
+    // Unit price.
+    google.type.Money price = 4;
+
+    // Quantity available in stock.
+    int64 stock_quantity = 5;
+
+    // Part category.
+    Category category = 6;
+
+    // Part dimensions.
+    Dimensions dimensions = 7;
+
+    // Manufacturer information.
+    Manufacturer manufacturer = 8;
+
+    // Tags for quick search.
+    repeated string tags = 9;
+
+    // Flexible metadata.
+    map<string, Value> metadata = 10;
+
+    // Creation timestamp.
+    google.protobuf.Timestamp created_at = 11;
+
+    // Last update timestamp.
+    google.protobuf.Timestamp updated_at = 12;
+}
+
+// Filter for details.
+// If field is empty - do not filter by this field.
+message PartsFilter {
+    repeated google.protobuf.StringValue uuids = 1;
+    repeated google.protobuf.StringValue names = 2;
+    repeated Category categories = 3;
+    repeated google.protobuf.StringValue manufacturer_countries = 4;
+    repeated google.protobuf.StringValue tags = 5;
+}
+
+// Category of the Part.
+enum Category {
+  CATEGORY_UNSPECIFIED = 0;
+  CATEGORY_ENGINE = 1;
+  CATEGORY_FUEL = 2;
+  CATEGORY_PORTHOLE = 3;
+  CATEGORY_WING = 4;  
+}
+
+// Dimenstions of the Part.
+message Dimensions {
+  double length = 1;
+  double width = 2;
+  double height = 3;
+  double weight = 4;
+}
+
+// Manufacturer of the Part.
+message Manufacturer {
+  string name = 1;
+  string country = 2;
+  string website = 3;
+}
+
+// Value represents a typed metadata value.
+message Value {
+  oneof kind {
+    string string_value = 1;
+    int64 int64_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+  }
+}
