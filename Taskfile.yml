@@ -18,7 +18,7 @@ vars:
   PROTOC_GEN_GO: '{{.BIN_DIR}}/protoc-gen-go'
   PROTOC_GEN_GO_GRPC: '{{.BIN_DIR}}/protoc-gen-go-grpc'
 
-  MODULES: inventory payment shared
+  MODULES: inventory payment order shared
 
 tasks:
   install-formatters:
@@ -138,7 +138,6 @@ tasks:
 
   proto:install-plugins:
     desc: "Устанавливает protoc плагины в каталог bin"
-    dir: shared/proto
     cmds:
       - |
         [ -f {{.PROTOC_GEN_GO}} ] || {
@@ -153,7 +152,7 @@ tasks:
   proto:update-deps:
     deps: [ install-buf ]
     desc: Обновляет зависимости protobuf из удаленных репозиториев (googleapis и т.д.)
-    dir: shared/proto
+    dir: shared
     cmds:
       - |
         echo "🔄 Обновляем зависимости buf..."
@@ -162,7 +161,7 @@ tasks:
   proto:lint:
     deps: [ proto:install-plugins, proto:update-deps ]
     desc: Проверка .proto-файлов на соответствие стилю
-    dir: shared/proto
+    dir: shared
     cmds:
       - |
         echo "🔍 Проверяем .proto файлы..."
@@ -171,8 +170,17 @@ tasks:
   proto:gen:
     deps: [ install-buf, proto:install-plugins, proto:update-deps, proto:lint ]
     desc: Генерация Go-кода из .proto
-    dir: shared/proto
+    dir: shared
     cmds:
       - |
         echo "🏗️ Генерируем Go код из .proto..."
         {{.BUF}} generate
+
+  ogen:gen:
+    desc: "Генерация shared/api"
+    dir: shared/api
+    cmds:
+      - |
+        echo "🏗️ Генерируем Go код из openapi..."
+        go generate ./...
+
