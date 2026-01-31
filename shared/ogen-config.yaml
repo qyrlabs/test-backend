@@ -1,0 +1,5 @@
+# sets parser options.
+parser:
+  #  enables remote references resolving.
+  allow_remote: true
+  

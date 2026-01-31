@@ -1,0 +1,51 @@
+type: object
+
+required:
+  - order_uuid
+  - user_uuid
+  - part_uuids
+  - total_price_minor
+  - status
+
+properties:
+
+  order_uuid:
+    type: string
+    format: uuid
+    description: UUID заказа
+    example: cae5e039-0224-4f36-86c2-224385d6f9e6
+
+  user_uuid:
+    type: string
+    format: uuid
+    description: UUID пользователя
+    example: cae5e039-0224-4f36-86c2-224385d6f9e6
+
+  part_uuids:
+    type: array
+    description: Список UUID деталей
+    minItems: 1
+    items:
+      type: string
+      format: uuid
+      example: cae5e039-0224-4f36-86c2-224385d6f9e6
+
+  total_price_minor:
+    type: integer
+    format: int64
+    description: Сумма заказа в копейках
+    example: 12350
+
+  transaction_uuid:
+    type: string
+    format: uuid
+    description: UUID транзакции
+    example: cae5e039-0224-4f36-86c2-224385d6f9e6
+
+  payment_method:
+    allOf:
+      - $ref: ./enums/payment_method.yaml
+
+  status:
+    allOf:
+      - $ref: ./enums/order_status.yaml

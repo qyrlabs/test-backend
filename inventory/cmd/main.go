@@ -68,10 +68,6 @@ func (s *inventoryService) ListParts(ctx context.Context, req *inventoryv1.ListP
 		}
 	}
 
-	if len(filteredParts) == 0 {
-		return nil, status.Errorf(codes.NotFound, "parts not found")
-	}
-
 	return &inventoryv1.ListPartsResponse{
 		Parts: filteredParts,
 	}, nil
@@ -83,12 +79,6 @@ func main() {
 		log.Printf("failed to listen: %v\n", err)
 		return
 	}
-
-	defer func() {
-		if cerr := lis.Close(); cerr != nil {
-			log.Printf("failed to close listener: %v\n", cerr)
-		}
-	}()
 
 	grpcServer := grpc.NewServer()
 	reflection.Register(grpcServer)
@@ -169,7 +159,7 @@ func createParts(count int) []*inventoryv1.Part {
 			Uuid:          gofakeit.UUID(),
 			Name:          gofakeit.Name(),
 			Description:   gofakeit.Sentence(10),
-			Price:         int64(gofakeit.IntRange(1, 100000)),
+			PriceMinor:    int64(gofakeit.IntRange(1, 100000)),
 			StockQuantity: int64(gofakeit.IntRange(1, 100)),
 			Category:      randomCategory(),
 			Dimensions:    fakeDimensions(),

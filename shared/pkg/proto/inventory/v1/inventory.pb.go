@@ -268,7 +268,7 @@ type Part struct {
 	// Description of the part.
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// Unit price.
-	Price int64 `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`
+	PriceMinor int64 `protobuf:"varint,4,opt,name=price_minor,json=priceMinor,proto3" json:"price_minor,omitempty"`
 	// Quantity available in stock.
 	StockQuantity int64 `protobuf:"varint,5,opt,name=stock_quantity,json=stockQuantity,proto3" json:"stock_quantity,omitempty"`
 	// Part category.
@@ -340,9 +340,9 @@ func (x *Part) GetDescription() string {
 	return ""
 }
 
-func (x *Part) GetPrice() int64 {
+func (x *Part) GetPriceMinor() int64 {
 	if x != nil {
-		return x.Price
+		return x.PriceMinor
 	}
 	return 0
 }
@@ -738,12 +738,13 @@ const file_inventory_v1_inventory_proto_rawDesc = "" +
 	"\x10ListPartsRequest\x121\n" +
 	"\x06filter\x18\x01 \x01(\v2\x19.inventory.v1.PartsFilterR\x06filter\"=\n" +
 	"\x11ListPartsResponse\x12(\n" +
-	"\x05parts\x18\x01 \x03(\v2\x12.inventory.v1.PartR\x05parts\"\xd5\x04\n" +
+	"\x05parts\x18\x01 \x03(\v2\x12.inventory.v1.PartR\x05parts\"\xe0\x04\n" +
 	"\x04Part\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
-	"\x05price\x18\x04 \x01(\x03R\x05price\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vprice_minor\x18\x04 \x01(\x03R\n" +
+	"priceMinor\x12%\n" +
 	"\x0estock_quantity\x18\x05 \x01(\x03R\rstockQuantity\x122\n" +
 	"\bcategory\x18\x06 \x01(\x0e2\x16.inventory.v1.CategoryR\bcategory\x128\n" +
 	"\n" +
