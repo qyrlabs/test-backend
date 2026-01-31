@@ -19,10 +19,10 @@ tags:
 
 paths:
   /api/v1/orders:
-    $ref: ./paths/order_create.yaml
-  /api/v1/orders/{order_uuid}/pay:
-    $ref: ./paths/order_pay_by_uuid.yaml
+    $ref: ./paths/orders.yaml
   /api/v1/orders/{order_uuid}:
-    $ref: ./paths/order_get_by_uuid.yaml
+    $ref: ./paths/orders_uuid.yaml
+  /api/v1/orders/{order_uuid}/pay:
+    $ref: ./paths/orders_uuid_pay.yaml
   /api/v1/orders/{order_uuid}/cancel:
-    $ref: ./paths/order_cancel_by_uuid.yaml
+    $ref: ./paths/orders_uuid_cancel.yaml

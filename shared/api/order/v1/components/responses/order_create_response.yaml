@@ -1,0 +1,14 @@
+type: object
+
+required:
+  - order_uuid
+
+properties:
+
+  order_uuid:
+    allOf:
+      - $ref: '../order.yaml#/properties/order_uuid'
+      
+  total_price_minor:
+    allOf:
+      - $ref: '../order.yaml#/properties/total_price_minor'
