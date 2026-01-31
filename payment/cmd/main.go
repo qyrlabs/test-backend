@@ -50,12 +50,6 @@ func main() {
 		return
 	}
 
-	defer func() {
-		if cerr := lis.Close(); cerr != nil {
-			log.Printf("failed to close listener: %v\n", cerr)
-		}
-	}()
-
 	grpcServer := grpc.NewServer()
 	reflection.Register(grpcServer)
 
