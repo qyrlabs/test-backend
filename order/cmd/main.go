@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -15,6 +16,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	orderv1 "github.com/qyrlabs/test-backend/shared/pkg/openapi/order/v1"
+	inventoryv1 "github.com/qyrlabs/test-backend/shared/pkg/proto/inventory/v1"
+	paymentv1 "github.com/qyrlabs/test-backend/shared/pkg/proto/payment/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -58,12 +63,16 @@ func (s *OrderStorage) UpdateOrder(uuid string, order *orderv1.Order) {
 // Handler
 
 type OrderHandler struct {
-	storage *OrderStorage
+	storage         *OrderStorage
+	inventoryClient inventoryv1.InventoryServiceClient
+	paymentClient   paymentv1.PaymentServiceClient
 }
 
-func NewOrderHandler(storage *OrderStorage) *OrderHandler {
+func NewOrderHandler(storage *OrderStorage, inventoryClient inventoryv1.InventoryServiceClient, paymentClient paymentv1.PaymentServiceClient) *OrderHandler {
 	return &OrderHandler{
-		storage: storage,
+		storage:         storage,
+		inventoryClient: inventoryClient,
+		paymentClient:   paymentClient,
 	}
 }
 
@@ -128,15 +137,65 @@ func (h *OrderHandler) NewError(ctx context.Context, err error) *orderv1.Generic
 	}
 }
 
-func main() {
-	storage := NewOrderStorage()
+func initApplication() (*grpc.ClientConn, *grpc.ClientConn, *orderv1.Server, error) {
+	inventoryConn, err := grpc.NewClient(
+		inventoryServiceAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to create inventory service grpc connection: %w", err)
+	}
 
-	orderHandler := NewOrderHandler(storage)
+	paymentConn, err := grpc.NewClient(
+		paymentServiceAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		// Cleanup: закрываем уже открытое inventoryServiceConn соединение при ошибке
+		if cerr := inventoryConn.Close(); cerr != nil {
+			log.Printf("failed to close inventory service grpc connection: %v", cerr)
+		}
+		return nil, nil, nil, fmt.Errorf("failed to create payment service grpc connection: %w", err)
+	}
+
+	inventoryClient := inventoryv1.NewInventoryServiceClient(inventoryConn)
+	paymentClient := paymentv1.NewPaymentServiceClient(paymentConn)
+
+	storage := NewOrderStorage()
+	orderHandler := NewOrderHandler(storage, inventoryClient, paymentClient)
 
 	orderServer, err := orderv1.NewServer(orderHandler)
 	if err != nil {
-		log.Fatalf("Failed to create OpenAPI Order Server: %v", err)
+		// Cleanup: закрываем уже открытое inventoryServiceConn соединение при ошибке
+		if cerr := inventoryConn.Close(); cerr != nil {
+			log.Printf("failed to close inventory service grpc connection: %v", cerr)
+		}
+		if cerr := paymentConn.Close(); cerr != nil {
+			log.Printf("failed to close payment service grpc connection: %v", cerr)
+		}
+		return nil, nil, nil, fmt.Errorf("failed to create order server: %w", err)
 	}
+
+	return inventoryConn, paymentConn, orderServer, nil
+}
+
+func main() {
+	inventoryConn, paymentConn, orderServer, err := initApplication()
+	if err != nil {
+		log.Fatalf("failed to init application: %v", err)
+	}
+
+	defer func() {
+		if cerr := inventoryConn.Close(); cerr != nil {
+			log.Printf("failed to close inventory service grpc connection: %v", cerr)
+		}
+	}()
+
+	defer func() {
+		if cerr := paymentConn.Close(); cerr != nil {
+			log.Printf("failed to close payment service grpc connection: %v", cerr)
+		}
+	}()
 
 	r := chi.NewRouter()
 
@@ -156,7 +215,7 @@ func main() {
 		log.Printf("http server listening on %s\n", server.Addr)
 		err := server.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("Failed to start http server: %v", err)
+			log.Printf("failed to start http server: %v", err)
 		}
 	}()
 
@@ -172,7 +231,7 @@ func main() {
 
 	err = server.Shutdown(ctx)
 	if err != nil {
-		log.Printf("Failed to shutdown http server: %v", err)
+		log.Printf("failed to shutdown http server: %v", err)
 	}
 
 	log.Println("http server stopped")
