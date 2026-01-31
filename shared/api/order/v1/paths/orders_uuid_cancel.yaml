@@ -25,18 +25,6 @@ post:
         application/json:
           schema:
             $ref: '../components/errors/conflict_error.yaml'
-    '422':
-      description: Validation error
-      content:
-        application/json:
-          schema:
-            $ref: '../components/errors/validation_error.yaml'
-    '502':
-      description: Bad gateway
-      content:
-        application/json:
-          schema:
-            $ref: '../components/errors/bad_gateway_error.yaml'
     default:
       description: Unexpected error
       content:

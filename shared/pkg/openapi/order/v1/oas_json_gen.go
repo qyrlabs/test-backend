@@ -467,41 +467,6 @@ func (s *OptInt) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes int64 as json.
-func (o OptInt64) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	e.Int64(int64(o.Value))
-}
-
-// Decode decodes int64 from json.
-func (o *OptInt64) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptInt64 to nil")
-	}
-	o.Set = true
-	v, err := d.Int64()
-	if err != nil {
-		return err
-	}
-	o.Value = int64(v)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptInt64) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptInt64) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes PaymentMethod as json.
 func (o OptPaymentMethod) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -570,39 +535,6 @@ func (s *OptString) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes TotalPriceMinor as json.
-func (o OptTotalPriceMinor) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes TotalPriceMinor from json.
-func (o *OptTotalPriceMinor) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptTotalPriceMinor to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptTotalPriceMinor) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptTotalPriceMinor) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes uuid.UUID as json.
 func (o OptUUID) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -664,10 +596,8 @@ func (s *Order) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		if s.TotalPriceMinor.Set {
-			e.FieldStart("total_price_minor")
-			s.TotalPriceMinor.Encode(e)
-		}
+		e.FieldStart("total_price_minor")
+		e.Int64(s.TotalPriceMinor)
 	}
 	{
 		if s.TransactionUUID.Set {
@@ -751,9 +681,11 @@ func (s *Order) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"part_uuids\"")
 			}
 		case "total_price_minor":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				s.TotalPriceMinor.Reset()
-				if err := s.TotalPriceMinor.Decode(d); err != nil {
+				v, err := d.Int64()
+				s.TotalPriceMinor = int64(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -800,7 +732,7 @@ func (s *Order) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b01000111,
+		0b01001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -969,10 +901,8 @@ func (s *OrderCreateResponse) encodeFields(e *jx.Encoder) {
 		s.OrderUUID.Encode(e)
 	}
 	{
-		if s.TotalPriceMinor.Set {
-			e.FieldStart("total_price_minor")
-			s.TotalPriceMinor.Encode(e)
-		}
+		e.FieldStart("total_price_minor")
+		s.TotalPriceMinor.Encode(e)
 	}
 }
 
@@ -1001,8 +931,8 @@ func (s *OrderCreateResponse) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"order_uuid\"")
 			}
 		case "total_price_minor":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				s.TotalPriceMinor.Reset()
 				if err := s.TotalPriceMinor.Decode(d); err != nil {
 					return err
 				}
@@ -1020,7 +950,7 @@ func (s *OrderCreateResponse) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000001,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -1171,7 +1101,7 @@ func (s *OrderPayResponse) Encode(e *jx.Encoder) {
 func (s *OrderPayResponse) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("transaction_uuid")
-		e.Str(s.TransactionUUID)
+		json.EncodeUUID(e, s.TransactionUUID)
 	}
 }
 
@@ -1191,8 +1121,8 @@ func (s *OrderPayResponse) Decode(d *jx.Decoder) error {
 		case "transaction_uuid":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				v, err := d.Str()
-				s.TransactionUUID = string(v)
+				v, err := json.DecodeUUID(d)
+				s.TransactionUUID = v
 				if err != nil {
 					return err
 				}

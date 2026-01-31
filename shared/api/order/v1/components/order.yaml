@@ -4,6 +4,7 @@ required:
   - order_uuid
   - user_uuid
   - part_uuids
+  - total_price_minor
   - status
 
 properties:

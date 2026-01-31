@@ -41,7 +41,6 @@ func (s *BadGatewayError) SetMessage(val string) {
 	s.Message = val
 }
 
-func (*BadGatewayError) cancelOrderRes()    {}
 func (*BadGatewayError) createOrderRes()    {}
 func (*BadGatewayError) getOrderByUuidRes() {}
 func (*BadGatewayError) payOrderRes()       {}
@@ -209,52 +208,6 @@ func (o OptInt) Or(d int) int {
 	return d
 }
 
-// NewOptInt64 returns new OptInt64 with value set to v.
-func NewOptInt64(v int64) OptInt64 {
-	return OptInt64{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptInt64 is optional int64.
-type OptInt64 struct {
-	Value int64
-	Set   bool
-}
-
-// IsSet returns true if OptInt64 was set.
-func (o OptInt64) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptInt64) Reset() {
-	var v int64
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptInt64) SetTo(v int64) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptInt64) Get() (v int64, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptInt64) Or(d int64) int64 {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptPaymentMethod returns new OptPaymentMethod with value set to v.
 func NewOptPaymentMethod(v PaymentMethod) OptPaymentMethod {
 	return OptPaymentMethod{
@@ -347,52 +300,6 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
-// NewOptTotalPriceMinor returns new OptTotalPriceMinor with value set to v.
-func NewOptTotalPriceMinor(v TotalPriceMinor) OptTotalPriceMinor {
-	return OptTotalPriceMinor{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptTotalPriceMinor is optional TotalPriceMinor.
-type OptTotalPriceMinor struct {
-	Value TotalPriceMinor
-	Set   bool
-}
-
-// IsSet returns true if OptTotalPriceMinor was set.
-func (o OptTotalPriceMinor) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptTotalPriceMinor) Reset() {
-	var v TotalPriceMinor
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptTotalPriceMinor) SetTo(v TotalPriceMinor) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptTotalPriceMinor) Get() (v TotalPriceMinor, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptTotalPriceMinor) Or(d TotalPriceMinor) TotalPriceMinor {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptUUID returns new OptUUID with value set to v.
 func NewOptUUID(v uuid.UUID) OptUUID {
 	return OptUUID{
@@ -448,7 +355,7 @@ type Order struct {
 	// Список UUID деталей.
 	PartUuids []uuid.UUID `json:"part_uuids"`
 	// Сумма заказа в копейках.
-	TotalPriceMinor OptInt64 `json:"total_price_minor"`
+	TotalPriceMinor int64 `json:"total_price_minor"`
 	// UUID транзакции.
 	TransactionUUID OptUUID          `json:"transaction_uuid"`
 	PaymentMethod   OptPaymentMethod `json:"payment_method"`
@@ -471,7 +378,7 @@ func (s *Order) GetPartUuids() []uuid.UUID {
 }
 
 // GetTotalPriceMinor returns the value of TotalPriceMinor.
-func (s *Order) GetTotalPriceMinor() OptInt64 {
+func (s *Order) GetTotalPriceMinor() int64 {
 	return s.TotalPriceMinor
 }
 
@@ -506,7 +413,7 @@ func (s *Order) SetPartUuids(val []uuid.UUID) {
 }
 
 // SetTotalPriceMinor sets the value of TotalPriceMinor.
-func (s *Order) SetTotalPriceMinor(val OptInt64) {
+func (s *Order) SetTotalPriceMinor(val int64) {
 	s.TotalPriceMinor = val
 }
 
@@ -556,8 +463,8 @@ func (s *OrderCreateRequest) SetPartUuids(val PartUuids) {
 
 // Ref: #
 type OrderCreateResponse struct {
-	OrderUUID       OrderUUID          `json:"order_uuid"`
-	TotalPriceMinor OptTotalPriceMinor `json:"total_price_minor"`
+	OrderUUID       OrderUUID       `json:"order_uuid"`
+	TotalPriceMinor TotalPriceMinor `json:"total_price_minor"`
 }
 
 // GetOrderUUID returns the value of OrderUUID.
@@ -566,7 +473,7 @@ func (s *OrderCreateResponse) GetOrderUUID() OrderUUID {
 }
 
 // GetTotalPriceMinor returns the value of TotalPriceMinor.
-func (s *OrderCreateResponse) GetTotalPriceMinor() OptTotalPriceMinor {
+func (s *OrderCreateResponse) GetTotalPriceMinor() TotalPriceMinor {
 	return s.TotalPriceMinor
 }
 
@@ -576,7 +483,7 @@ func (s *OrderCreateResponse) SetOrderUUID(val OrderUUID) {
 }
 
 // SetTotalPriceMinor sets the value of TotalPriceMinor.
-func (s *OrderCreateResponse) SetTotalPriceMinor(val OptTotalPriceMinor) {
+func (s *OrderCreateResponse) SetTotalPriceMinor(val TotalPriceMinor) {
 	s.TotalPriceMinor = val
 }
 
@@ -600,16 +507,16 @@ func (s *OrderPayRequest) SetPaymentMethod(val PaymentMethod) {
 // Ref: #
 type OrderPayResponse struct {
 	// UUID транзакции.
-	TransactionUUID string `json:"transaction_uuid"`
+	TransactionUUID uuid.UUID `json:"transaction_uuid"`
 }
 
 // GetTransactionUUID returns the value of TransactionUUID.
-func (s *OrderPayResponse) GetTransactionUUID() string {
+func (s *OrderPayResponse) GetTransactionUUID() uuid.UUID {
 	return s.TransactionUUID
 }
 
 // SetTransactionUUID sets the value of TransactionUUID.
-func (s *OrderPayResponse) SetTransactionUUID(val string) {
+func (s *OrderPayResponse) SetTransactionUUID(val uuid.UUID) {
 	s.TransactionUUID = val
 }
 
@@ -765,7 +672,6 @@ func (s *ValidationError) SetMessage(val string) {
 	s.Message = val
 }
 
-func (*ValidationError) cancelOrderRes()    {}
 func (*ValidationError) createOrderRes()    {}
 func (*ValidationError) getOrderByUuidRes() {}
 func (*ValidationError) payOrderRes()       {}

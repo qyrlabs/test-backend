@@ -68,10 +68,6 @@ func (s *inventoryService) ListParts(ctx context.Context, req *inventoryv1.ListP
 		}
 	}
 
-	if len(filteredParts) == 0 {
-		return nil, status.Errorf(codes.NotFound, "parts not found")
-	}
-
 	return &inventoryv1.ListPartsResponse{
 		Parts: filteredParts,
 	}, nil

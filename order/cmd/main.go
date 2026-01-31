@@ -15,11 +15,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	orderv1 "github.com/qyrlabs/test-backend/shared/pkg/openapi/order/v1"
 	inventoryv1 "github.com/qyrlabs/test-backend/shared/pkg/proto/inventory/v1"
 	paymentv1 "github.com/qyrlabs/test-backend/shared/pkg/proto/payment/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -53,11 +55,13 @@ func (s *OrderStorage) GetOrder(uuid string) *orderv1.Order {
 	return s.orders[uuid]
 }
 
-func (s *OrderStorage) UpdateOrder(uuid string, order *orderv1.Order) {
+func (s *OrderStorage) UpdateOrder(order *orderv1.Order) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.orders[uuid] = order
+	order_uuid := order.GetOrderUUID().String()
+	s.orders[order_uuid] = order
+	log.Println(order)
 }
 
 // Handler
@@ -82,10 +86,34 @@ func NewOrderHandler(storage *OrderStorage, inventoryClient inventoryv1.Inventor
 //
 // POST /api/v1/orders/{order_uuid}/cancel
 func (h *OrderHandler) CancelOrder(ctx context.Context, params orderv1.CancelOrderParams) (orderv1.CancelOrderRes, error) {
-	return nil, &orderv1.GenericErrorStatusCode{
-		StatusCode: http.StatusNoContent,
-		Response:   orderv1.GenericError{},
+	order := h.storage.GetOrder(params.OrderUUID.String())
+
+	if order == nil {
+		return &orderv1.NotFoundError{
+			Code:    http.StatusNotFound,
+			Message: "order not found",
+		}, nil
 	}
+
+	if order.GetStatus() == orderv1.OrderStatusSTATUSCANCELLED {
+		return &orderv1.ConflictError{
+			Code:    http.StatusConflict,
+			Message: "order already cancelled",
+		}, nil
+	}
+
+	if order.GetStatus() == orderv1.OrderStatusSTATUSPAID {
+		return &orderv1.ConflictError{
+			Code:    http.StatusConflict,
+			Message: "order already paid and cannot be cancelled",
+		}, nil
+	}
+
+	order.SetStatus(orderv1.OrderStatusSTATUSCANCELLED)
+
+	h.storage.UpdateOrder(order)
+
+	return order, nil
 }
 
 // CreateOrder implements createOrder operation.
@@ -94,10 +122,49 @@ func (h *OrderHandler) CancelOrder(ctx context.Context, params orderv1.CancelOrd
 //
 // POST /api/v1/orders
 func (h *OrderHandler) CreateOrder(ctx context.Context, req *orderv1.OrderCreateRequest) (orderv1.CreateOrderRes, error) {
-	return nil, &orderv1.GenericErrorStatusCode{
-		StatusCode: http.StatusNoContent,
-		Response:   orderv1.GenericError{},
+	partUuids := make([]string, 0, len(req.GetPartUuids()))
+	for _, uuid := range req.GetPartUuids() {
+		partUuids = append(partUuids, uuid.String())
 	}
+
+	filteredParts, err := h.inventoryClient.ListParts(ctx, &inventoryv1.ListPartsRequest{
+		Filter: &inventoryv1.PartsFilter{
+			Uuids: partUuids,
+		},
+	})
+	if err != nil {
+		return &orderv1.BadGatewayError{
+			Code:    http.StatusBadGateway,
+			Message: fmt.Sprintf("failed to get filtered parts: %v", err),
+		}, nil
+	}
+
+	if len(filteredParts.GetParts()) != len(partUuids) {
+		return &orderv1.ValidationError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "missing specified part uuids",
+		}, nil
+	}
+
+	var totalPrice int64 = 0
+	for _, part := range filteredParts.GetParts() {
+		totalPrice += part.GetPriceMinor()
+	}
+
+	order := &orderv1.Order{
+		OrderUUID:       uuid.New(),
+		UserUUID:        uuid.UUID(req.GetUserUUID()),
+		PartUuids:       req.GetPartUuids(),
+		TotalPriceMinor: totalPrice,
+		Status:          orderv1.OrderStatusSTATUSPENDINGPAYMENT,
+	}
+
+	h.storage.UpdateOrder(order)
+
+	return &orderv1.OrderCreateResponse{
+		OrderUUID:       orderv1.OrderUUID(order.GetOrderUUID()),
+		TotalPriceMinor: orderv1.TotalPriceMinor(order.GetTotalPriceMinor()),
+	}, nil
 }
 
 // GetOrderByUuid implements getOrderByUuid operation.
@@ -106,10 +173,16 @@ func (h *OrderHandler) CreateOrder(ctx context.Context, req *orderv1.OrderCreate
 //
 // GET /api/v1/orders/{order_uuid}
 func (h *OrderHandler) GetOrderByUuid(ctx context.Context, params orderv1.GetOrderByUuidParams) (orderv1.GetOrderByUuidRes, error) {
-	return nil, &orderv1.GenericErrorStatusCode{
-		StatusCode: http.StatusNoContent,
-		Response:   orderv1.GenericError{},
+	order := h.storage.GetOrder(params.OrderUUID.String())
+
+	if order == nil {
+		return &orderv1.NotFoundError{
+			Code:    http.StatusNotFound,
+			Message: "order not found",
+		}, nil
 	}
+
+	return order, nil
 }
 
 // PayOrder implements payOrder operation.
@@ -118,10 +191,59 @@ func (h *OrderHandler) GetOrderByUuid(ctx context.Context, params orderv1.GetOrd
 //
 // POST /api/v1/orders/{order_uuid}/pay
 func (h *OrderHandler) PayOrder(ctx context.Context, req *orderv1.OrderPayRequest, params orderv1.PayOrderParams) (orderv1.PayOrderRes, error) {
-	return nil, &orderv1.GenericErrorStatusCode{
-		StatusCode: http.StatusNoContent,
-		Response:   orderv1.GenericError{},
+	order := h.storage.GetOrder(params.OrderUUID.String())
+
+	if order == nil {
+		return &orderv1.NotFoundError{
+			Code:    http.StatusNotFound,
+			Message: "order not found",
+		}, nil
 	}
+
+	if order.GetStatus() == orderv1.OrderStatusSTATUSPAID {
+		return &orderv1.ConflictError{
+			Code:    http.StatusConflict,
+			Message: "order already paid",
+		}, nil
+	}
+
+	if order.GetStatus() == orderv1.OrderStatusSTATUSCANCELLED {
+		return &orderv1.ConflictError{
+			Code:    http.StatusConflict,
+			Message: "order cancelled",
+		}, nil
+	}
+
+	paymentMethod, ok := paymentv1.PaymentMethod_value[string(req.GetPaymentMethod())]
+	if !ok {
+		return &orderv1.ValidationError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "invalid payment method",
+		}, nil
+	}
+
+	payOrderResponse, err := h.paymentClient.PayOrder(ctx, &paymentv1.PayOrderRequest{
+		OrderUuid:     order.GetOrderUUID().String(),
+		UserUuid:      order.GetUserUUID().String(),
+		PaymentMethod: paymentv1.PaymentMethod(paymentMethod),
+	})
+	if err != nil {
+		return &orderv1.BadGatewayError{
+			Code:    http.StatusBadGateway,
+			Message: fmt.Sprintf("failed to pay order: %v", err),
+		}, nil
+	}
+
+	transactionUuid := uuid.MustParse(payOrderResponse.GetTransactionUuid())
+
+	order.SetStatus(orderv1.OrderStatusSTATUSPAID)
+	order.SetTransactionUUID(orderv1.NewOptUUID(transactionUuid))
+
+	h.storage.UpdateOrder(order)
+
+	return &orderv1.OrderPayResponse{
+		TransactionUUID: transactionUuid,
+	}, nil
 }
 
 // NewError creates *GenericErrorStatusCode from error returned by handler.
@@ -197,17 +319,17 @@ func main() {
 		}
 	}()
 
-	r := chi.NewRouter()
+	router := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(requestTimeout))
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.Timeout(requestTimeout))
 
-	r.Mount("/", orderServer)
+	router.Mount("/", orderServer)
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort("localhost", httpPort),
-		Handler:           r,
+		Handler:           router,
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 

@@ -4,4 +4,5 @@ required:
 properties:
   transaction_uuid:
     type: string
+    format: uuid
     description: UUID транзакции
