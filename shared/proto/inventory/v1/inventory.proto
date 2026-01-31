@@ -47,7 +47,7 @@ message Part {
     string description = 3;
 
     // Unit price.
-    int64 price = 4;
+    int64 price_minor = 4;
 
     // Quantity available in stock.
     int64 stock_quantity = 5;
