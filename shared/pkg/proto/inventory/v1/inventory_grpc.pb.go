@@ -4,7 +4,7 @@
 // - protoc             (unknown)
 // source: inventory/v1/inventory.proto
 
-package inventoryv1
+package v1
 
 import (
 	context "context"
