@@ -4,7 +4,7 @@ package inventory.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/qyrlabs/test-backend/shared/pkg/proto/inventory/v1;inventoryv1";
+option go_package = "github.com/qyrlabs/test-backend/shared/pkg/proto/inventory/v1";
 
 // Inventory Service stores and provides info about Parts(details).
 service InventoryService {
